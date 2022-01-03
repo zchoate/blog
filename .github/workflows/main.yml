@@ -32,7 +32,7 @@ jobs:
           docker tag ${REGISTRY}/${IMAGE}:${GITHUB_SHA} ${REGISTRY}/${IMAGE}:${TIMESTAMP}
           docker push ${REGISTRY}/${IMAGE}:${GITHUB_SHA}
           docker push ${REGISTRY}/${IMAGE}:${TIMESTAMP}
-          docker push ${REGISTRY}/${IMAGE}:main
+          docker push ${REGISTRY}/${IMAGE}:latest
         env:
           REGISTRY: ${{ secrets.REGISTRY }}
           REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
