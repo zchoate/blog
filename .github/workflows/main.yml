@@ -29,7 +29,8 @@ jobs:
           export TIMESTAMP=$(date --utc +%Y%m%d_%H%M)
           docker build -t ${REGISTRY}/${IMAGE}:${GITHUB_SHA} .
           echo ${REGISTRY_SECRET} | docker login -u ${REGISTRY_USER} --password-stdin ${REGISTRY}
-          docker tag ${REGISTRY}/${IMAGE}:${GITHUB_SHA} ${REGISTRY}/${IMAGE}:${TIMESTAMP} ${REGISTRY}/${IMAGE}:main
+          docker tag ${REGISTRY}/${IMAGE}:${GITHUB_SHA} ${REGISTRY}/${IMAGE}:${TIMESTAMP}
+          docker tag ${REGISTRY}/${IMAGE}:${GITHUB_SHA} ${REGISTRY}/${IMAGE}:main
           docker push ${REGISTRY}/${IMAGE}:${GITHUB_SHA}
           docker push ${REGISTRY}/${IMAGE}:${TIMESTAMP}
           docker push ${REGISTRY}/${IMAGE}:main
