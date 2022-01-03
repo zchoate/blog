@@ -6,4 +6,5 @@ ADD . /src
 RUN hugo
 
 FROM ${NGINX_IMG}
+LABEL org.opencontainers.image.source=https://github.com/zchoate/blog
 COPY --from=hugo /src/public /usr/share/nginx/html
