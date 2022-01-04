@@ -1,7 +1,5 @@
 ---
 title: "About"
-draft: false
-toc: false
 ---
 ## A bit about me
 
