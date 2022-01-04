@@ -1,3 +1,4 @@
+relativeUrls = true
 baseurl = "/"
 languageCode = "en-us"
 theme = "hello-friend"
