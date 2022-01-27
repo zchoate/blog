@@ -101,44 +101,44 @@ services:
       - traefik.http.middlewares.ide.digestauth.usersfile=/.ideusers
       - treafik.http.routers.idetls.middlewares=ide@docker
 ```
-- Proxy
-    - We're using Traefik as the reverse proxy. Traefik is also doing TLS termination.
-    - Volumes
-        - `/var/run/docker.sock` - For basic functionality in Traefik, we need to mount the Docker Unix socket - we'll do this as read-only, though. There are alternative methods that are more secure, but assuming your server is pretty secure, this is the easiest to get started.
-        - `/home/ide/.letsencrypt` - For LetsEncrypt, we need to persist the certificates and related files, and we're doing that in the `.letsencrypt` directory created in the last step.
-        - `/home/ide/.ideusers` - For the Digest Auth, we need to mount the `.ideusers` file we created in the last step.
-    - Commands
-        - `--providers.docker=true` - We’re telling Traefik that we’re running this in Docker. Kubernetes and other orchestrators are options as well.
-        - `--entrypoints.web/websecure.address=:80/:443` - These are the ports we’re exposing on the outside of our proxy (HTTP and HTTPS)
-        - `--certificateresolvers.cn.acme...` - These are the settings for LetsEncrypt. We could change the challenge type, but we’ll need to specify different values. Refer to Traefik’s documentation if you’re interested in doing DNS validation.
-    - Ports
-        - We're exposing 80 and 443 for HTTP and HTTPS traffic. We could also expose 8080 along with a command flag to enable the Traefik dashboard.
-- IDE
-    - This is the OpenVSCode Server container/configuration.
-    - Commands
-        - `--connection-secret /.idesecret` - A token is required for the OpenVSCode server. To keep this value consistent, we’re running this command to have the application reference this file for the token value.
-    - User
-        - This is set to the UID of the user created earlier. Running in this context makes permissions easier to manage since this container will be modifying files in a specific directory.
-    - Volumes
-        - `/etc/localtime` - Passing the time through.
-        - `/home/ide/workspace` - This is the `home` directory of the application. Files created and modified will live in this directory.
-        - `/home/ide/.idesecret` - This is the token file we're passing into OpenVSCode server.
-    - Labels
-        - Point to a hostname
-            - ``traefik.http.routers.xxx.rule=Host(`hostname`)``
-        - Point to an entrypoint/port
-            - HTTP - `traefik.http.routers.ide.entrypoints=web`
-            - HTTPS - `traefik.http.routers.idetls.entrypoints=websecure`
-        - Enable TLS and ACME/LetsEncrypt
-            - `traefik.http.routers.idetls.tls.certresolver=cn`
-        - HTTP to HTTPS Redirect Middleware
-            - `traefik.http.middlewares.ide-redirect.redirectscheme.scheme=https`
-            - `traefik.http.middlewares.ide-redirect.redirectscheme.permanent=true`
-        - DIgest Auth Middleware
-            - `traefik.http.middlewares.ide.digestauth.usersfile=/.ideusers`
-        - Tell a router to use a specific middleware
-            - `traefik.http.routers.ide.middlewares=ide-redirect@docker`
-            - `traefik.http.routers.idetls.middlewares=ide@docker`
+#### Proxy
+We're using Traefik as the reverse proxy. Traefik is also doing TLS termination.
+- Volumes
+    - `/var/run/docker.sock` - For basic functionality in Traefik, we need to mount the Docker Unix socket - we'll do this as read-only, though. There are alternative methods that are more secure, but assuming your server is pretty secure, this is the easiest to get started.
+    - `/home/ide/.letsencrypt` - For LetsEncrypt, we need to persist the certificates and related files, and we're doing that in the `.letsencrypt` directory created in the last step.
+    - `/home/ide/.ideusers` - For the Digest Auth, we need to mount the `.ideusers` file we created in the last step.
+- Commands
+    - `--providers.docker=true` - We’re telling Traefik that we’re running this in Docker. Kubernetes and other orchestrators are options as well.
+    - `--entrypoints.web/websecure.address=:80/:443` - These are the ports we’re exposing on the outside of our proxy (HTTP and HTTPS)
+    - `--certificateresolvers.cn.acme...` - These are the settings for LetsEncrypt. We could change the challenge type, but we’ll need to specify different values. Refer to Traefik’s documentation if you’re interested in doing DNS validation.
+- Ports
+    - We're exposing 80 and 443 for HTTP and HTTPS traffic. We could also expose 8080 along with a command flag to enable the Traefik dashboard.
+#### IDE
+This is the OpenVSCode Server container/configuration.
+- Commands
+    - `--connection-secret /.idesecret` - A token is required for the OpenVSCode server. To keep this value consistent, we’re running this command to have the application reference this file for the token value.
+- User
+    - This is set to the UID of the user created earlier. Running in this context makes permissions easier to manage since this container will be modifying files in a specific directory.
+- Volumes
+    - `/etc/localtime` - Passing the time through.
+    - `/home/ide/workspace` - This is the `home` directory of the application. Files created and modified will live in this directory.
+    - `/home/ide/.idesecret` - This is the token file we're passing into OpenVSCode server.
+- Labels
+    - Point to a hostname
+        - ``traefik.http.routers.xxx.rule=Host(`hostname`)``
+    - Point to an entrypoint/port
+        - HTTP - `traefik.http.routers.ide.entrypoints=web`
+        - HTTPS - `traefik.http.routers.idetls.entrypoints=websecure`
+    - Enable TLS and ACME/LetsEncrypt
+        - `traefik.http.routers.idetls.tls.certresolver=cn`
+    - HTTP to HTTPS Redirect Middleware
+        - `traefik.http.middlewares.ide-redirect.redirectscheme.scheme=https`
+        - `traefik.http.middlewares.ide-redirect.redirectscheme.permanent=true`
+    - DIgest Auth Middleware
+        - `traefik.http.middlewares.ide.digestauth.usersfile=/.ideusers`
+    - Tell a router to use a specific middleware
+        - `traefik.http.routers.ide.middlewares=ide-redirect@docker`
+        - `traefik.http.routers.idetls.middlewares=ide@docker`
 
 Once the `docker-compose.yml` file is created, we can start the containers using `docker-compose up`. If I haven't tested the setup before, I prefer to run without the `-d` flag so I can see the logs directly in the console. Once everything starts up, navigate to the configured host with the `/?tkn={{vscode_token_value_here}}` appended to your hostname. You should be prompted to login with the username and password configured and then passed to the OpenVSCode page. If the token was incorrect or not added to the URL, you should see a `Forbidden` error on the page. Once you have successfully connected to the OpenVSCode page, you should be able to navigate there without passing the token since a cookie should be saved to your browser that is good for one week.
 
