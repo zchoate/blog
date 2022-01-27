@@ -430,4 +430,4 @@ Apply complete! Resources: 3 added, 0 changed, 0 destroyed.
 So once the `apply` is completed, the server should be up and running.
 
 ## Next Steps
-See [Part II]() to see how the server is configured to run OpenVSCode Server. And if you could care less about that, you've got a server running in Linode that has Docker and Docker-Compose installed.
+See [Part II](../create_a_vscode_server_ii) to see how the server is configured to run OpenVSCode Server. And if you could care less about that, you've got a server running in Linode that has Docker and Docker-Compose installed.

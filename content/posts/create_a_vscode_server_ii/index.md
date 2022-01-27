@@ -1,18 +1,20 @@
 ---
 title: "Run a VSCode server on a Linode VPS: Part II"
 description: "Setup up a Terraform project to provision a Linode server and host OpenVSCode Server with Docker Compose."
-date: 2022-01-25T22:22:15-05:00
-draft: true
+date: 2022-01-26T22:22:15-05:00
+draft: false
 tags: 
 toc: true
 showReadingTime: true
 ---
+## We did a little bit of Terraform. Now for a little bit of Docker-Compose.
+In the [last post](../create_a_vscode_server), we covered setting up the infrastructure required to run a simple OpenVSCode server deployment. If you're landing here and could care less about setting up a server in the cloud or using Terraform, that's fine. This covers the bits around getting OpenVSCode running in a Docker-Compose deployment. I'm assuming you at least have a Linux server with Docker and Docker-Compose installed.
 
 ## Docker-Compose Setup
-I'll preface this section by saying this is an MVP setup. I'll probably refine my setup further with an identity-aware proxy to leverage OpenID Connect. However this setup should work and is somewhat secured with digest authentication and a token required for OpenVSCode Server. 
+I’ll preface this section by saying this is an MVP setup. I’ll probably refine my setup with an identity-aware proxy to leverage OpenID Connect. However, this setup should work and is somewhat secured with digest authentication and a token required for OpenVSCode Server.
 
 ### Prepare Files and Directories
-I've prepared a script that can take care of this as well as some of the other prequisites. The script is below and we'll break it down below that.
+I’ve prepared a script that can take care of this and some of the other prerequisites. The script is below, and we’ll break it down below that.
 ```bash
 #!/bin/bash
 
@@ -41,15 +43,15 @@ echo "$IDE_USER:$IDE_REALM:$new_pass" > /home/ide/.ideusers
 # Set ownership of directory to IDE user
 chown -R ide /home/ide
 ```
-- Add a user… we're creating a user named `ide` and a home directory for that user. This user won't login so we don't need a password for it.
-- Create a workspace directory… this will be used as the primary directory for OpenVSCode Server
-- Create `.letsencrypt` directory… this will be where LetsEncrypt certificates get saved.
-- Create `.idesecret`… you'll need to export `IDE_SECRET` prior to running this script. This will be the token that is appended to the end of the URL to access the server `https://.../?tkn=IDE_SECRET_VALUE`
-- Create `.ideusers`… you'll need to export `IDE_USER`,`IDE_REALM`,`IDE_PASSWORD` prior to running this script. This is the Digest Authentication file used by Traefik for authenticating users prior to accessing the OpenVSCode Server instance. Anyone will be able to hit this so make sure the password is significantly complex.
-- Change the ownership of `/home/ide`… this should be owned by `ide` already but these new files created are likely owned by `root`. Let's make sure we get everything consistent.
+- Add a user: We're creating a user named `ide` and a home directory for that user. This user won't login, so we don't need a password for it.
+- Create a workspace directory: This will be used as the primary directory for OpenVSCode Server.
+- Create `.letsencrypt` directory: This will be where LetsEncrypt certificates get saved.
+- Create `.idesecret`: You'll need to export `IDE_SECRET` before running this script. This will be the token that is appended to the end of the URL to access the server `https://.../?tkn=IDE_SECRET_VALUE`.
+- Create `.ideusers`: Before running this script, you'll need to export `IDE_USER`,`IDE_REALM`,`IDE_PASSWORD`. This is the Digest Authentication file used by Traefik for authenticating users before accessing the OpenVSCode Server instance. Anyone will be able to hit this, so make sure the password is significantly complex.
+- Change the ownership of `/home/ide`: This should be owned by `ide` already but these new files created are likely owned by `root`. Let's make sure we get everything consistent.
 
 ### DNS
-Make sure you have a DNS record pointed at your VPS IP. This should be done well before we start up the Docker containers since Traefik will leverage LetsEncrypt to issue a certificate. LetsEncrypt need to resolve the hostname of the server prior to issuing the certificate.
+Make sure you have a DNS record pointed at your VPS IP. This should be done well before starting up the Docker containers since Traefik will leverage LetsEncrypt to issue a certificate. LetsEncrypt needs to resolve the hostname of the server before issuing the certificate.
 
 ### Docker-Compose
 Here is the `docker-compose.yml` and I'll break it down below that.
@@ -102,21 +104,21 @@ services:
 - Proxy
     - We're using Traefik as the reverse proxy. Traefik is also doing TLS termination.
     - Volumes
-        - `/var/run/docker.sock` - For basic functionality in Traefik, we need to mount the Docker Unix socket - we'll do this as read-only though. There are alternative methods that are more secure but this is the easiest to get started with assuming your server is pretty secure to start with.
-        - `/home/ide/.letsencrypt` - For LetsEncrypt, we need to persist the certificates and related files and we're doing that in the `.letsencrypt` directory created in the last step.
+        - `/var/run/docker.sock` - For basic functionality in Traefik, we need to mount the Docker Unix socket - we'll do this as read-only, though. There are alternative methods that are more secure, but assuming your server is pretty secure, this is the easiest to get started.
+        - `/home/ide/.letsencrypt` - For LetsEncrypt, we need to persist the certificates and related files, and we're doing that in the `.letsencrypt` directory created in the last step.
         - `/home/ide/.ideusers` - For the Digest Auth, we need to mount the `.ideusers` file we created in the last step.
     - Commands
-        - `--providers.docker=true` - We're telling Traefik that we're running this in Docker. Kubernetes and other orchestrators are options as well.
-        - `--entrypoints.web/websecure.address=:80/:443` - These are the ports we're exposing on the outside of our proxy (HTTP and HTTPS)
-        - `--certificateresolvers.cn.acme...` - These are the settings for LetsEncrypt. We could change the challenge type but we'll need to specify different values. Refer to Traefik's documenation if you're interested in doing DNS validation.
+        - `--providers.docker=true` - We’re telling Traefik that we’re running this in Docker. Kubernetes and other orchestrators are options as well.
+        - `--entrypoints.web/websecure.address=:80/:443` - These are the ports we’re exposing on the outside of our proxy (HTTP and HTTPS)
+        - `--certificateresolvers.cn.acme...` - These are the settings for LetsEncrypt. We could change the challenge type, but we’ll need to specify different values. Refer to Traefik’s documentation if you’re interested in doing DNS validation.
     - Ports
         - We're exposing 80 and 443 for HTTP and HTTPS traffic. We could also expose 8080 along with a command flag to enable the Traefik dashboard.
 - IDE
     - This is the OpenVSCode Server container/configuration.
     - Commands
-        - `--connection-secret /.idesecret` - A token is required for OpenVSCode server, to keep this value consistent, we're running this command to have the application reference this file for the token value.
+        - `--connection-secret /.idesecret` - A token is required for the OpenVSCode server. To keep this value consistent, we’re running this command to have the application reference this file for the token value.
     - User
-        - This is set to the UID of the user created earlier. Running in this context makes permissions a bit easier to manage since this container will be modifying files in a specific directory.
+        - This is set to the UID of the user created earlier. Running in this context makes permissions easier to manage since this container will be modifying files in a specific directory.
     - Volumes
         - `/etc/localtime` - Passing the time through.
         - `/home/ide/workspace` - This is the `home` directory of the application. Files created and modified will live in this directory.
@@ -138,6 +140,8 @@ services:
             - `traefik.http.routers.ide.middlewares=ide-redirect@docker`
             - `traefik.http.routers.idetls.middlewares=ide@docker`
 
-Once the `docker-compose.yml` file is created, we can start the containers using `docker-compose up`. If I haven't tested the setup before, I prefer to run without the `-d` flag so I can see the logs directly in the console. Once everything starts up, navigate to the configured host with the `/?tkn={{vscode_token_value_here}}` appended to your hostname. You should be prompted to login with the username and password configured and then passed to the OpenVSCode page. If the token was incorrect or not added to the URL, then you should see a `Forbidden` error on the page. Once you have connected to the OpenVSCode page successfully, you should be able to navigate there without passing the token since a cookie should be saved to your browser that is good for 1 week.
+Once the `docker-compose.yml` file is created, we can start the containers using `docker-compose up`. If I haven't tested the setup before, I prefer to run without the `-d` flag so I can see the logs directly in the console. Once everything starts up, navigate to the configured host with the `/?tkn={{vscode_token_value_here}}` appended to your hostname. You should be prompted to login with the username and password configured and then passed to the OpenVSCode page. If the token was incorrect or not added to the URL, you should see a `Forbidden` error on the page. Once you have successfully connected to the OpenVSCode page, you should be able to navigate there without passing the token since a cookie should be saved to your browser that is good for one week.
 
-From here you can hit `CTRL`+`C` on your SSH session and run `docker-compose up -d` to run detached. To stop the containers run `docker-compose down` from the same `/home/ide` directory or you'll need to specify the path to the `docker-compose.yml` file.
+From here, you can hit `CTRL`+`C` on your SSH session and run `docker-compose up -d` to run detached. To stop the containers, run `docker-compose down` from the same `/home/ide` directory or you'll need to specify the path to the `docker-compose.yml` file.
+
+That's it! This two-part post is my first attempt at putting together some technical content to share some of what I've been doing at home and professionally. If you notice an issue or see something incorrect, you can open a [Github issue](https://github.com/zchoate/blog/issues/new/choose).
