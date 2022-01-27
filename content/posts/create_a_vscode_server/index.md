@@ -1,6 +1,6 @@
 ---
 title: "Run a VSCode server on a Linode VPS: Part I"
-description: "Setup up a Terraform project to provision a Linode server and host OpenVSCode Server with Docker-Compose."
+description: "Setup up a Terraform project to provision a Linode server and host OpenVSCode Server with Docker-Compose. In Part I, we focus on the Terraform code to deploy the Linode server."
 date: 2022-01-25T22:22:15-05:00
 draft: false
 tags: 
